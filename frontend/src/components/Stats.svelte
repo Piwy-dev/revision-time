@@ -164,13 +164,20 @@
                 <span class="current-time">
                   {formatMinutes(stats.days[dateStr].total)} / {formatMinutes(examSession?.target_minutes || 240)}
                 </span>
+                <span class="difference" class:above={isAboveTarget(stats.days[dateStr].total, examSession?.target_minutes || 240)}>
+                  {calculateDifference(stats.days[dateStr].total, examSession?.target_minutes || 240)}
+                </span>
               {:else}
                 <span class="current-time">0m / {formatMinutes(examSession?.target_minutes || 240)}</span>
+                <span class="difference below">
+                  {calculateDifference(0, examSession?.target_minutes || 240)}
+                </span>
               {/if}
             </div>
             <div class="progress-bar">
               <div 
-                class="progress-fill" 
+                class="progress-fill"
+                class:above={stats.days[dateStr] && isAboveTarget(stats.days[dateStr].total, examSession?.target_minutes || 240)}
                 style="width: {Math.min(100, (stats.days[dateStr]?.total || 0) / (examSession?.target_minutes || 240) * 100)}%"
               ></div>
             </div>
@@ -187,17 +194,12 @@
     padding: 24px;
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-top: 30px;
   }
 
   h3 {
     margin: 0 0 20px 0;
     font-size: 18px;
-    color: #333;
-  }
-
-  h4 {
-    margin: 0;
-    font-size: 16px;
     color: #333;
   }
 
@@ -341,6 +343,22 @@
     color: #666;
   }
 
+  .difference {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e74c3c;
+    min-width: 50px;
+    text-align: right;
+  }
+
+  .difference.above {
+    color: #2ecc71;
+  }
+
+  .difference.below {
+    color: #e74c3c;
+  }
+
   .progress-bar {
     width: 100%;
     height: 6px;
@@ -353,6 +371,10 @@
     height: 100%;
     background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
     transition: width 0.3s ease;
+  }
+
+  .progress-fill.above {
+    background: linear-gradient(90deg, #2ecc71 0%, #27ae60 100%);
   }
 
   .loading,

@@ -197,10 +197,12 @@
 
     <WeeklyHourlyChart examSessionId={selectedExamSession.id} dateRange={getDateRange()} />
 
+    <!-- Hidden for now
     <div key={refreshKey} class="charts-grid">
       <DailyChart examSessionId={selectedExamSession.id} dateRange={getDateRange()} />
       <HourlyChart examSessionId={selectedExamSession.id} dateRange={getDateRange()} />
     </div>
+    -->
 
     <Stats examSessionId={selectedExamSession.id} examSession={selectedExamSession} dateRange={getDateRange()} />
   {/if}
