@@ -80,7 +80,7 @@
 </script>
 
 <div class="card">
-  <h3>📊 Statistics</h3>
+  <h3>📊 Statistics (last 7 days)</h3>
 
   {#if loading}
     <div class="loading">Loading...</div>
@@ -109,21 +109,6 @@
     </div>
 
     <div class="targets-section">
-      <div class="target-header">
-        <h4>Daily Target by Day of Week</h4>
-        {#if examSession}
-          <button 
-            class="edit-btn"
-            on:click={() => {
-              editingTarget = !editingTarget
-              editValue = examSession.target_minutes
-            }}
-          >
-            {editingTarget ? '✕' : '⚙️'}
-          </button>
-        {/if}
-      </div>
-
       {#if editingTarget && examSession}
         <div class="edit-form">
           <div class="form-group">
@@ -221,27 +206,6 @@
     margin-top: 24px;
     padding-top: 24px;
     border-top: 1px solid #eee;
-  }
-
-  .target-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-  }
-
-  .edit-btn {
-    background: none;
-    border: none;
-    font-size: 18px;
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 4px;
-    transition: background 0.2s ease;
-  }
-
-  .edit-btn:hover {
-    background: #ddd;
   }
 
   .edit-form {
