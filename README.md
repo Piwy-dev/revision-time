@@ -6,6 +6,7 @@ A minimalist web application to track daily study time with beautiful visualizat
 
 - **📚 Exam Sessions** - Create separate study contexts for different exams (e.g., Math Final, Python Midterm)
 - **🔒 Data Isolation** - Each exam has its own study sessions and custom daily targets
+- **📋 Sessions Manager** - View, edit, and delete all study sessions with inline editing
 - **📊 Daily Study Dashboard** - Track total study time per day with visual charts
 - **⏰ Session Logging** - Log study sessions with start/end times (auto-calculates duration)
 - **📈 Hourly Distribution** - See when you study most during the day
@@ -76,6 +77,18 @@ Then open **http://localhost:8000** in your browser.
 6. Click **"Add Session"** - duration is auto-calculated
 
 **Example**: 8:30 → 9:20 = 50 minutes
+
+### Managing Sessions (View, Edit, Delete)
+
+1. Click **"📋 Sessions"** button in the header
+2. A table appears showing all sessions for the current period
+3. **View**: See all sessions in date order
+4. **Edit**: Click "Edit" on any row → modify dates/times → Click "Save"
+5. **Delete**: Click "Delete" → Confirm → Session removed
+6. **Duration**: Auto-calculates when you edit times
+7. **Stats**: Total sessions and total study time shown at bottom
+
+See [SESSIONS_MANAGEMENT.md](./SESSIONS_MANAGEMENT.md) for detailed guide.
 
 ### Viewing Statistics
 

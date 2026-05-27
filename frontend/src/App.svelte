@@ -5,10 +5,12 @@
   import Stats from './components/Stats.svelte'
   import ExamSelector from './components/ExamSelector.svelte'
   import SessionsList from './components/SessionsList.svelte'
+  import ExamSessionManager from './components/ExamSessionManager.svelte'
   import { onMount } from 'svelte'
 
   let showForm = false
   let showSessionsList = false
+  let showExamManager = false
   let selectedPeriod = 'week'
   let selectedExamSession = null
   let examSessions = []
@@ -73,6 +75,20 @@
     refreshKey++
   }
 
+  function handleExamUpdated(exam) {
+    // Reload sessions in case exam dates changed
+    refreshKey++
+  }
+
+  function handleExamDeleted(exam) {
+    // If deleted exam was selected, select first remaining exam
+    if (selectedExamSession?.id === exam.id) {
+      loadExamSessions()
+    } else {
+      loadExamSessions()
+    }
+  }
+
   function toggleForm() {
     showForm = !showForm
   }
@@ -92,8 +108,14 @@
           <span class="exam-badge">{selectedExamSession.name}</span>
         </div>
       {/if}
+      <button class="btn btn-secondary" on:click={() => { showExamManager = !showExamManager; showExamCreator = false; showSessionsList = false; showForm = false }}>
+        {showExamManager ? '✕' : '⚙️ Manage'}
+      </button>
       <button class="btn btn-secondary" on:click={() => showExamCreator = !showExamCreator}>
         {showExamCreator ? '✕' : '+ New Exam'}
+      </button>
+      <button class="btn btn-primary" on:click={() => { showSessionsList = !showSessionsList; showForm = false }}>
+        {showSessionsList ? '✕ Close' : '📋 Sessions'}
       </button>
       <button class="btn btn-primary" on:click={toggleForm}>
         {showForm ? '✕ Close' : '+ Add Session'}
@@ -103,6 +125,14 @@
 
   {#if showExamCreator}
     <ExamSelector onExamCreated={handleExamCreated} onSelectExam={(exam) => selectedExamSession = exam} bind:examSessions />
+  {/if}
+
+  {#if showExamManager}
+    <ExamSessionManager {examSessions} onExamUpdated={handleExamUpdated} onExamDeleted={handleExamDeleted} />
+  {/if}
+
+  {#if showSessionsList && selectedExamSession}
+    <SessionsList examSessionId={selectedExamSession.id} dateRange={getDateRange()} />
   {/if}
 
   {#if showForm && selectedExamSession}
