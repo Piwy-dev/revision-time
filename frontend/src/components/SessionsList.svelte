@@ -10,6 +10,21 @@
   let editingId = null
   let editFormData = {}
 
+  function sortSessions(sessionsToSort) {
+    return sessionsToSort.sort((a, b) => {
+      // First sort by date (descending - most recent first)
+      const dateCompare = b.date.localeCompare(a.date)
+      if (dateCompare !== 0) return dateCompare
+      // Then sort by start time (descending)
+      return b.start_time.localeCompare(a.start_time)
+    })
+  }
+
+  function formatDate(dateString) {
+    const [year, month, day] = dateString.split('-')
+    return `${day}/${month}/${year}`
+  }
+
   async function loadSessions() {
     if (!examSessionId) return
     loading = true
@@ -20,7 +35,7 @@
         `/api/sessions?exam_session_id=${examSessionId}&start_date=${dateRange.start}&end_date=${dateRange.end}`
       )
       if (!response.ok) throw new Error('Failed to load sessions')
-      sessions = await response.json()
+      sessions = sortSessions(await response.json())
     } catch (err) {
       error = err.message || 'Error loading sessions'
     } finally {
@@ -65,6 +80,7 @@
       editingId = null
       editFormData = {}
       await loadSessions()
+      sessions = sortSessions(sessions)
     } catch (err) {
       error = err.message || 'Error updating session'
     }
@@ -81,6 +97,7 @@
       if (!response.ok) throw new Error('Failed to delete session')
 
       await loadSessions()
+      sessions = sortSessions(sessions)
     } catch (err) {
       error = err.message || 'Error deleting session'
     }
@@ -154,7 +171,7 @@
               </tr>
             {:else}
               <tr>
-                <td>{session.date}</td>
+                <td>{formatDate(session.date)}</td>
                 <td>{session.start_time}</td>
                 <td>{session.end_time}</td>
                 <td class="duration">{formatDuration(session.duration_minutes)}</td>
