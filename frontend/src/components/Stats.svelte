@@ -10,6 +10,9 @@
   let error = ''
   let editingTarget = false
   let editValue = 0
+  let currentPage = 0
+  const daysPerPage = 7
+  let paginatedDays = []
 
   const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
@@ -19,21 +22,24 @@
   }
 
   async function fetchStats() {
-    if (!examSessionId) return
+    if (!examSessionId || !examSession) return
 
     try {
       loading = true
       error = ''
       
-      // Calculate the actual last 7 days (not week boundaries)
+      // Use exam session start date to today (or end date if exam has ended)
       const today = new Date()
-      const sevenDaysAgo = new Date(today)
-      sevenDaysAgo.setDate(today.getDate() - 6)
+      const startDate = examSession.start_date
       
-      const startDate = sevenDaysAgo.toISOString().split('T')[0]
-      const endDate = today.toISOString().split('T')[0]
+      // Use end_date if available and before today, otherwise use today
+      const endDate = examSession.end_date 
+        ? new Date(examSession.end_date) < today
+          ? examSession.end_date
+          : today.toISOString().split('T')[0]
+        : today.toISOString().split('T')[0]
       
-      // Fetch daily stats for last 7 days
+      // Fetch daily stats for the full range
       const statsResponse = await fetch(
         `/api/stats/daily?exam_session_id=${examSessionId}&start_date=${startDate}&end_date=${endDate}`
       )
@@ -49,10 +55,28 @@
         aggregated.datesList.push(dateStr)
       })
       stats = aggregated
+      currentPage = 0
     } catch (err) {
       error = err.message || 'Error loading stats'
     } finally {
       loading = false
+    }
+  }
+
+  function getTotalPages() {
+    return Math.max(1, Math.ceil((stats?.datesList?.length || 0) / daysPerPage))
+  }
+
+  function goToNextPage() {
+    const maxPage = getTotalPages() - 1
+    if (currentPage < maxPage) {
+      currentPage = currentPage + 1
+    }
+  }
+
+  function goToPreviousPage() {
+    if (currentPage > 0) {
+      currentPage = currentPage - 1
     }
   }
 
@@ -95,15 +119,23 @@
     return actualMinutes >= targetMinutes
   }
 
-  $: if (examSessionId) fetchStats()
+  $: if (examSessionId && examSession) fetchStats()
+
+  $: {
+    if (stats?.datesList) {
+      const start = currentPage * daysPerPage
+      const end = start + daysPerPage
+      paginatedDays = stats.datesList.slice(start, end)
+    }
+  }
 
   onMount(() => {
-    if (examSessionId) fetchStats()
+    if (examSessionId && examSession) fetchStats()
   })
 </script>
 
 <div class="card">
-  <h3>📊 Statistics (last 7 days)</h3>
+  <h3>📊 Statistics</h3>
 
   {#if loading}
     <div class="loading">Loading...</div>
@@ -155,8 +187,33 @@
         </div>
       {/if}
 
+      <div class="targets-section-header">
+        <h4>Daily Stats</h4>
+        {#if getTotalPages() > 1}
+          <div class="pagination-controls">
+            <button 
+              class="pagination-btn" 
+              on:click={goToPreviousPage} 
+              disabled={currentPage === 0}
+            >
+              ← Previous
+            </button>
+            <span class="page-info">
+              Page {currentPage + 1} of {getTotalPages()}
+            </span>
+            <button 
+              class="pagination-btn" 
+              on:click={goToNextPage} 
+              disabled={currentPage === getTotalPages() - 1}
+            >
+              Next →
+            </button>
+          </div>
+        {/if}
+      </div>
+
       <div class="targets-list">
-        {#each stats.datesList as dateStr}
+        {#each paginatedDays as dateStr}
           <div class="target-item">
             <div class="target-left">
               <span class="day-name">{dateStr}</span>
@@ -235,6 +292,59 @@
     margin-top: 24px;
     padding-top: 24px;
     border-top: 1px solid #eee;
+  }
+
+  .targets-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    gap: 16px;
+  }
+
+  .targets-section-header h4 {
+    margin: 0;
+    font-size: 16px;
+    color: #333;
+  }
+
+  .pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .pagination-btn {
+    padding: 6px 12px;
+    border: 1px solid #667eea;
+    background: white;
+    color: #667eea;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .pagination-btn:hover:not(:disabled) {
+    background: #667eea;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+  }
+
+  .pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .page-info {
+    font-size: 13px;
+    color: #666;
+    font-weight: 500;
+    min-width: 100px;
+    text-align: center;
   }
 
   .edit-form {
