@@ -13,6 +13,7 @@
   let showExamManager = false
   let selectedPeriod = 'week'
   let selectedExamSession = null
+  let selectedExamSessionId = null
   let examSessions = []
   let showExamCreator = false
   let refreshKey = 0
@@ -30,8 +31,26 @@
       if (!response.ok) throw new Error('Failed to load exam sessions')
       examSessions = await response.json()
       
+      // Try to restore previously selected exam from localStorage
+      if (!selectedExamSession && selectedExamSessionId) {
+        const restored = examSessions.find(e => e.id === selectedExamSessionId)
+        if (restored) {
+          selectedExamSession = restored
+          return
+        }
+      }
+      
+      // Preserve currently selected exam session if it still exists
+      if (selectedExamSession) {
+        const stillExists = examSessions.find(e => e.id === selectedExamSession.id)
+        if (stillExists) {
+          selectedExamSession = stillExists
+          return
+        }
+      }
+      
       // Select first exam session if none selected
-      if (examSessions.length > 0 && !selectedExamSession) {
+      if (examSessions.length > 0) {
         selectedExamSession = examSessions[0]
       }
     } catch (err) {
@@ -82,18 +101,26 @@
 
   function handleExamDeleted(exam) {
     // If deleted exam was selected, select first remaining exam
-    if (selectedExamSession?.id === exam.id) {
-      loadExamSessions()
-    } else {
-      loadExamSessions()
-    }
+    loadExamSessions()
+    refreshKey++
   }
 
   function toggleForm() {
     showForm = !showForm
   }
 
+  // Save selected exam session ID to localStorage whenever it changes
+  $: if (selectedExamSession?.id) {
+    localStorage.setItem('selectedExamSessionId', selectedExamSession.id)
+    refreshKey++
+  }
+
   onMount(() => {
+    // Load previously selected exam session ID from localStorage
+    const savedId = localStorage.getItem('selectedExamSessionId')
+    if (savedId) {
+      selectedExamSessionId = parseInt(savedId)
+    }
     loadExamSessions()
   })
 
