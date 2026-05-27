@@ -4,6 +4,7 @@
 
   Chart.register(...registerables)
 
+  export let examSessionId = null
   export let dateRange = { start: '', end: '' }
 
   let canvas
@@ -13,11 +14,13 @@
   let error = ''
 
   async function fetchData() {
+    if (!examSessionId) return
+
     try {
       loading = true
       error = ''
       const response = await fetch(
-        `/api/stats/hourly?start_date=${dateRange.start}&end_date=${dateRange.end}`
+        `/api/stats/hourly?exam_session_id=${examSessionId}&start_date=${dateRange.start}&end_date=${dateRange.end}`
       )
       if (!response.ok) throw new Error('Failed to fetch data')
       data = await response.json()
@@ -82,11 +85,11 @@
     })
   }
 
-  $: dateRange && fetchData()
+  $: examSessionId && dateRange && fetchData()
   $: data && renderChart()
 
   onMount(() => {
-    fetchData()
+    if (examSessionId) fetchData()
   })
 </script>
 

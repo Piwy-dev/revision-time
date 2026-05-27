@@ -1,4 +1,5 @@
 <script>
+  export let examSessionId = null
   export let onSessionAdded = () => {}
 
   let date = new Date().toISOString().split('T')[0]
@@ -8,6 +9,11 @@
   let error = ''
 
   async function handleSubmit() {
+    if (!examSessionId) {
+      error = 'Exam session not selected'
+      return
+    }
+
     if (!date || !startTime || !endTime) {
       error = 'Please fill in all fields'
       return
@@ -26,6 +32,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          exam_session_id: examSessionId,
           date,
           start_time: startTime,
           end_time: endTime,

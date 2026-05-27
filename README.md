@@ -4,10 +4,12 @@ A minimalist web application to track daily study time with beautiful visualizat
 
 ## Features
 
+- **📚 Exam Sessions** - Create separate study contexts for different exams (e.g., Math Final, Python Midterm)
+- **🔒 Data Isolation** - Each exam has its own study sessions and custom daily targets
 - **📊 Daily Study Dashboard** - Track total study time per day with visual charts
 - **⏰ Session Logging** - Log study sessions with start/end times (auto-calculates duration)
 - **📈 Hourly Distribution** - See when you study most during the day
-- **🎯 Daily Targets** - Set and track study goals for each day of the week
+- **🎯 Daily Targets** - Set and track study goals for each day of the week (per exam)
 - **📅 Time Periods** - View stats for this week, last 7 days, this month, or all-time
 - **💾 Persistent Storage** - All data stored locally in SQLite database
 
@@ -54,13 +56,24 @@ Then open **http://localhost:8000** in your browser.
 
 ## How to Use
 
+### Creating an Exam Session
+
+1. Click **"+ New Exam"** button in the header
+2. Fill in:
+   - **Exam Name** (e.g., "Python Final", "Math Midterm")
+   - **Description** (optional)
+   - **Start & End Dates** (study period for this exam)
+3. Click **"Create"** - your exam is now selected
+4. Use the **"Exam Session"** dropdown to switch between exams
+
 ### Adding a Study Session
 
-1. Click **"+ Add Session"** button
-2. Select the date (defaults to today)
-3. Enter start time (e.g., 8:30)
-4. Enter end time (e.g., 9:20)
-5. Click **"Add Session"** - duration is auto-calculated
+1. Make sure an exam is selected (shown in header)
+2. Click **"+ Add Session"** button
+3. Select the date (defaults to today)
+4. Enter start time (e.g., 8:30)
+5. Enter end time (e.g., 9:20)
+6. Click **"Add Session"** - duration is auto-calculated
 
 **Example**: 8:30 → 9:20 = 50 minutes
 
@@ -70,15 +83,22 @@ Then open **http://localhost:8000** in your browser.
 - **Hourly Chart**: Shows how much you studied in each hour
 - **Time Period Selector**: Switch between week/month/all-time views
 - **Stats Panel**: Aggregate stats + editable daily targets
+- **Exam Selector**: Switch between different exams
 
-### Setting Daily Targets
+All statistics are per-exam and updated when you switch exams.
+
+### Setting Daily Targets (Per Exam)
 
 1. Scroll to **"Daily Targets"** section
 2. Click ⚙️ icon next to any day
 3. Enter target in minutes (e.g., 300 for 5 hours)
 4. Click **"Save"**
 
-Targets are stored per day of week and used as benchmark in charts.
+Targets are stored per exam, per day of week. Each exam can have different targets!
+
+### Switching Between Exams
+
+Use the **"Exam Session"** dropdown to switch. All data, charts, and targets update for the new exam context.
 
 ## Project Structure
 
@@ -86,58 +106,102 @@ Targets are stored per day of week and used as benchmark in charts.
 revision-time/
 ├── backend/
 │   ├── main.py           # FastAPI app entry point
-│   ├── database.py       # SQLAlchemy + SQLite setup
+│   ├── database.py       # SQLAlchemy + SQLite setup (ExamSession, Session, Targets)
 │   ├── models.py         # Pydantic schemas
-│   ├── routes.py         # API endpoints
+│   ├── routes.py         # API endpoints (exam-scoped)
 │   └── __init__.py
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── App.svelte    # Main component
-│   │   ├── main.js       # Entry point
+│   │   ├── App.svelte           # Main component with exam context
+│   │   ├── main.js              # Entry point
 │   │   └── components/
-│   │       ├── SessionForm.svelte
-│   │       ├── DailyChart.svelte
-│   │       ├── HourlyChart.svelte
-│   │       └── Stats.svelte
-│   ├── public/           # Static assets
+│   │       ├── ExamSelector.svelte    # Create/manage exam sessions
+│   │       ├── SessionForm.svelte     # Add study sessions
+│   │       ├── DailyChart.svelte      # Daily stats chart
+│   │       ├── HourlyChart.svelte     # Hourly distribution
+│   │       └── Stats.svelte           # Stats panel + targets
 │   ├── dist/             # Built files (generated)
 │   ├── package.json
 │   └── vite.config.js
 │
 ├── pyproject.toml        # Python dependencies
 ├── study.db             # SQLite database (auto-created)
-└── start.sh             # Startup script
+├── start.sh             # Startup script
+├── README.md            # This file
+├── EXAM_SESSIONS.md     # Exam sessions feature guide
+└── QUICKSTART.md        # Quick start guide
 ```
 
 ## API Endpoints
 
-### Sessions
-- `POST /api/sessions` - Create a session
-- `GET /api/sessions?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD` - List sessions
+### Exam Sessions
+- `POST /api/exam-sessions` - Create a new exam session
+- `GET /api/exam-sessions` - List all exam sessions
+- `GET /api/exam-sessions/{id}` - Get exam session details
+- `PUT /api/exam-sessions/{id}` - Update exam session
+- `DELETE /api/exam-sessions/{id}` - Delete exam session
+
+### Study Sessions (Exam-scoped)
+- `POST /api/sessions` - Create a session (requires `exam_session_id`)
+- `GET /api/sessions?exam_session_id={id}&start_date=...&end_date=...` - List sessions for exam
 - `DELETE /api/sessions/{id}` - Delete a session
 
-### Statistics
-- `GET /api/stats/daily?start_date=...&end_date=...` - Daily totals with targets
-- `GET /api/stats/hourly?start_date=...&end_date=...` - Hourly distribution
+### Statistics (Exam-scoped)
+- `GET /api/stats/daily?exam_session_id={id}&start_date=...&end_date=...` - Daily totals with targets
+- `GET /api/stats/hourly?exam_session_id={id}&start_date=...&end_date=...` - Hourly distribution
 
-### Targets
-- `GET /api/targets` - Get all daily targets
-- `GET /api/target/{day}` - Get target for day (0=Mon, 6=Sun)
-- `PUT /api/target/{day}` - Update target for day
+### Daily Targets (Exam-scoped)
+- `GET /api/exam-targets/{exam_id}` - Get all daily targets for exam
+- `PUT /api/exam-targets/{exam_id}/{day}` - Update target for day (0=Mon, 6=Sun)
+- `GET /api/target/{day}` - Get global daily target (legacy)
+- `PUT /api/target/{day}` - Update global daily target (legacy)
 
 ## Database
 
 Data is stored in `study.db` (SQLite):
 
-- **sessions**: id, date, start_time, end_time, duration_minutes, created_at
-- **daily_targets**: id, day_of_week (0-6), target_minutes
+- **exam_sessions**: Exam session contexts (name, description, dates, active status)
+- **sessions**: Study sessions (date, start_time, end_time, duration_minutes, exam_session_id FK)
+- **exam_daily_targets**: Per-exam daily targets (day_of_week, target_minutes, exam_session_id FK)
+- **daily_targets**: Global daily targets (legacy, day_of_week, target_minutes)
 
-No setup required - database is auto-created on first run.
+No setup required - database is auto-created on first run with proper relationships.
+
+### Data Isolation
+
+Each exam session has:
+- Isolated study sessions (linked via `exam_session_id` FK)
+### Data Isolation
+
+Each exam session has:
+- Isolated study sessions (linked via `exam_session_id` FK)
+- Isolated daily targets (per day of week, per exam)
+- Separate statistics (daily/hourly charts computed per exam)
+
+## Exam Sessions Feature
+
+This application supports **multiple isolated exam sessions**, perfect for tracking studies for multiple exams simultaneously.
+
+### Key Capabilities
+
+- ✓ Create unlimited exam sessions with custom date ranges
+- ✓ Each exam has isolated study data (no mixing)
+- ✓ Set different daily targets for each exam
+- ✓ Switch between exams with one click
+- ✓ All charts/stats update per exam context
+- ✓ Independent hourly patterns per exam
+
+### Use Cases
+
+- Studying for **multiple courses** simultaneously (Math, Python, History)
+- **Certification exams** with separate prep periods
+- **Summer courses** with overlapping schedules
+- **Re-examination attempts** with separate tracking
+
+**See [EXAM_SESSIONS.md](./EXAM_SESSIONS.md) for detailed usage guide.**
 
 ## Development
-
-### Rebuild Frontend
 
 ```bash
 cd frontend

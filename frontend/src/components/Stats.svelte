@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte'
 
+  export let examSessionId = null
   export let dateRange = { start: '', end: '' }
 
   let stats = null
@@ -13,13 +14,15 @@
   const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
   async function fetchStats() {
+    if (!examSessionId) return
+
     try {
       loading = true
       error = ''
       
       // Fetch daily stats
       const statsResponse = await fetch(
-        `/api/stats/daily?start_date=${dateRange.start}&end_date=${dateRange.end}`
+        `/api/stats/daily?exam_session_id=${examSessionId}&start_date=${dateRange.start}&end_date=${dateRange.end}`
       )
       if (!statsResponse.ok) throw new Error('Failed to fetch stats')
       const statsData = await statsResponse.json()
@@ -35,8 +38,8 @@
       })
       stats = aggregated
 
-      // Fetch targets
-      const targetsResponse = await fetch('/api/targets')
+      // Fetch targets for this exam session
+      const targetsResponse = await fetch(`/api/exam-targets/${examSessionId}`)
       if (!targetsResponse.ok) throw new Error('Failed to fetch targets')
       const targetsData = await targetsResponse.json()
       targetsData.forEach((t) => {
@@ -51,8 +54,10 @@
   }
 
   async function updateTarget(day) {
+    if (!examSessionId) return
+    
     try {
-      const response = await fetch(`/api/target/${day}`, {
+      const response = await fetch(`/api/exam-targets/${examSessionId}/${day}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target_minutes: editValue }),
@@ -72,10 +77,10 @@
     return `${hours}h ${mins}m`
   }
 
-  $: dateRange && fetchStats()
+  $: examSessionId && dateRange && fetchStats()
 
   onMount(() => {
-    fetchStats()
+    if (examSessionId) fetchStats()
   })
 </script>
 

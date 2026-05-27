@@ -3,10 +3,16 @@
   import HourlyChart from './components/HourlyChart.svelte'
   import SessionForm from './components/SessionForm.svelte'
   import Stats from './components/Stats.svelte'
+  import ExamSelector from './components/ExamSelector.svelte'
+  import SessionsList from './components/SessionsList.svelte'
   import { onMount } from 'svelte'
 
   let showForm = false
+  let showSessionsList = false
   let selectedPeriod = 'week'
+  let selectedExamSession = null
+  let examSessions = []
+  let showExamCreator = false
   let refreshKey = 0
 
   const periods = [
@@ -16,13 +22,27 @@
     { label: 'All Time', value: 'all' },
   ]
 
+  async function loadExamSessions() {
+    try {
+      const response = await fetch('/api/exam-sessions')
+      if (!response.ok) throw new Error('Failed to load exam sessions')
+      examSessions = await response.json()
+      
+      // Select first exam session if none selected
+      if (examSessions.length > 0 && !selectedExamSession) {
+        selectedExamSession = examSessions[0]
+      }
+    } catch (err) {
+      console.error('Error loading exam sessions:', err)
+    }
+  }
+
   function getDateRange() {
     const end = new Date()
     let start = new Date()
 
     switch (selectedPeriod) {
       case 'week':
-        // Monday to Sunday of current week
         start.setDate(end.getDate() - end.getDay() + 1)
         break
       case 'days7':
@@ -32,7 +52,7 @@
         start.setDate(1)
         break
       case 'all':
-        start = new Date('2020-01-01')
+        start = new Date(selectedExamSession?.start_date || '2020-01-01')
         break
     }
 
@@ -47,40 +67,83 @@
     showForm = false
   }
 
+  function handleExamCreated() {
+    loadExamSessions()
+    showExamCreator = false
+    refreshKey++
+  }
+
   function toggleForm() {
     showForm = !showForm
   }
+
+  onMount(() => {
+    loadExamSessions()
+  })
+
 </script>
 
 <div class="container">
   <header>
     <h1>📚 Study Tracker</h1>
-    <button class="btn btn-primary" on:click={toggleForm}>
-      {showForm ? '✕ Close' : '+ Add Session'}
-    </button>
+    <div class="header-controls">
+      {#if selectedExamSession}
+        <div class="exam-info">
+          <span class="exam-badge">{selectedExamSession.name}</span>
+        </div>
+      {/if}
+      <button class="btn btn-secondary" on:click={() => showExamCreator = !showExamCreator}>
+        {showExamCreator ? '✕' : '+ New Exam'}
+      </button>
+      <button class="btn btn-primary" on:click={toggleForm}>
+        {showForm ? '✕ Close' : '+ Add Session'}
+      </button>
+    </div>
   </header>
 
-  {#if showForm}
-    <SessionForm onSessionAdded={handleSessionAdded} />
+  {#if showExamCreator}
+    <ExamSelector onExamCreated={handleExamCreated} onSelectExam={(exam) => selectedExamSession = exam} bind:examSessions />
   {/if}
 
-  <div class="controls">
-    <div class="period-selector">
-      <label for="period-select">Time Period:</label>
-      <select id="period-select" bind:value={selectedPeriod}>
-        {#each periods as period}
-          <option value={period.value}>{period.label}</option>
-        {/each}
-      </select>
+  {#if showForm && selectedExamSession}
+    <SessionForm examSessionId={selectedExamSession.id} onSessionAdded={handleSessionAdded} />
+  {/if}
+
+  {#if !selectedExamSession}
+    <div class="empty-state">
+      <h2>📕 No Exam Sessions Yet</h2>
+      <p>Create your first exam session to start tracking study time.</p>
+      <button class="btn btn-primary" on:click={() => showExamCreator = true}>
+        + Create Exam Session
+      </button>
     </div>
-  </div>
+  {:else}
+    <div class="controls">
+      <div class="period-selector">
+        <label for="period-select">Time Period:</label>
+        <select id="period-select" bind:value={selectedPeriod}>
+          {#each periods as period}
+            <option value={period.value}>{period.label}</option>
+          {/each}
+        </select>
+      </div>
+      <div class="exam-selector">
+        <label for="exam-select">Exam Session:</label>
+        <select id="exam-select" bind:value={selectedExamSession}>
+          {#each examSessions as exam}
+            <option value={exam}>{exam.name}</option>
+          {/each}
+        </select>
+      </div>
+    </div>
 
-  <div key={refreshKey} class="charts-grid">
-    <DailyChart dateRange={getDateRange()} />
-    <HourlyChart dateRange={getDateRange()} />
-  </div>
+    <div key={refreshKey} class="charts-grid">
+      <DailyChart examSessionId={selectedExamSession.id} dateRange={getDateRange()} />
+      <HourlyChart examSessionId={selectedExamSession.id} dateRange={getDateRange()} />
+    </div>
 
-  <Stats dateRange={getDateRange()} />
+    <Stats examSessionId={selectedExamSession.id} dateRange={getDateRange()} />
+  {/if}
 </div>
 
 <style>
@@ -98,18 +161,41 @@
 
   header {
     background: white;
-    padding: 30px;
+    padding: 20px 30px;
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 20px;
   }
 
   h1 {
     font-size: 28px;
     margin: 0;
+  }
+
+  .header-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .exam-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .exam-badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
   }
 
   .btn {
@@ -132,26 +218,65 @@
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
   }
 
+  .btn-secondary {
+    background: white;
+    color: #667eea;
+    border: 2px solid #667eea;
+  }
+
+  .btn-secondary:hover {
+    background: #667eea;
+    color: white;
+  }
+
+  .empty-state {
+    background: white;
+    padding: 60px 30px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+  }
+
+  .empty-state h2 {
+    font-size: 24px;
+    margin: 0 0 12px 0;
+    color: #333;
+  }
+
+  .empty-state p {
+    font-size: 16px;
+    color: #666;
+    margin: 0 0 20px 0;
+  }
+
   .controls {
     background: white;
     padding: 20px;
     border-radius: 12px;
     margin-bottom: 30px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    align-items: center;
   }
 
-  .period-selector {
+  .period-selector,
+  .exam-selector {
     display: flex;
     align-items: center;
     gap: 12px;
   }
 
-  .period-selector label {
+  .period-selector label,
+  .exam-selector label {
     font-weight: 600;
     color: #333;
   }
 
-  .period-selector select {
+  .period-selector select,
+  .exam-selector select {
     padding: 8px 12px;
     border: 1px solid #ddd;
     border-radius: 6px;
@@ -160,7 +285,8 @@
     cursor: pointer;
   }
 
-  .period-selector select:hover {
+  .period-selector select:hover,
+  .exam-selector select:hover {
     border-color: #667eea;
   }
 
@@ -174,7 +300,30 @@
   @media (max-width: 768px) {
     header {
       flex-direction: column;
-      gap: 20px;
+      gap: 12px;
+    }
+
+    .header-controls {
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .header-controls button {
+      width: 100%;
+    }
+
+    .controls {
+      flex-direction: column;
+    }
+
+    .period-selector,
+    .exam-selector {
+      width: 100%;
+    }
+
+    .period-selector select,
+    .exam-selector select {
+      flex: 1;
     }
 
     .charts-grid {
