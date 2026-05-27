@@ -12,16 +12,20 @@
   let loading = true
   let error = ''
 
-  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
   const dayColors = [
-    'rgba(255, 99, 132, 1)',    // Red - Monday
-    'rgba(54, 162, 235, 1)',    // Blue - Tuesday
-    'rgba(75, 192, 192, 1)',    // Teal - Wednesday
-    'rgba(255, 206, 86, 1)',    // Yellow - Thursday
-    'rgba(153, 102, 255, 1)',   // Purple - Friday
-    'rgba(255, 159, 64, 1)',    // Orange - Saturday
-    'rgba(201, 203, 207, 1)',   // Gray - Sunday
+    'rgba(255, 99, 132, 1)',    // Red
+    'rgba(54, 162, 235, 1)',    // Blue
+    'rgba(75, 192, 192, 1)',    // Teal
+    'rgba(255, 206, 86, 1)',    // Yellow
+    'rgba(153, 102, 255, 1)',   // Purple
+    'rgba(255, 159, 64, 1)',    // Orange
+    'rgba(201, 203, 207, 1)',   // Gray
   ]
+
+  function formatDate(dateString) {
+    const [year, month, day] = dateString.split('-')
+    return `${day}/${month}/${year}`
+  }
 
   async function fetchAndProcessData() {
     if (!examSessionId) return
@@ -30,15 +34,23 @@
       loading = true
       error = ''
 
-      // Fetch daily stats to get the date range
+      // Calculate the actual last 7 days (not week boundaries)
+      const today = new Date()
+      const sevenDaysAgo = new Date(today)
+      sevenDaysAgo.setDate(today.getDate() - 6)
+      
+      const startDate = sevenDaysAgo.toISOString().split('T')[0]
+      const endDate = today.toISOString().split('T')[0]
+
+      // Fetch daily stats for last 7 days
       const statsResponse = await fetch(
-        `/api/stats/daily?exam_session_id=${examSessionId}&start_date=${dateRange.start}&end_date=${dateRange.end}`
+        `/api/stats/daily?exam_session_id=${examSessionId}&start_date=${startDate}&end_date=${endDate}`
       )
       if (!statsResponse.ok) throw new Error('Failed to fetch stats')
       const statsData = await statsResponse.json()
 
-      // Keep only last 7 days
-      const last7Days = statsData.slice(-7)
+      // Keep all data (already last 7 days)
+      const last7Days = statsData
 
       // For each day, we need to fetch the sessions and calculate cumulative minutes by hour
       const dayDataPromises = last7Days.map(async (dayStats) => {
@@ -82,7 +94,6 @@
 
         return {
           dayOfWeek,
-          dayName: dayNames[dayOfWeek],
           date,
           targetMinutes: dayStats.target_minutes,
           cumulativeData,
@@ -104,15 +115,15 @@
     const labels = Array.from({ length: 24 }, (_, i) => `${i}:00`)
 
     const datasets = dayDataArray.map((dayData, index) => ({
-      label: `${dayData.dayName} (${dayData.date})`,
+      label: formatDate(dayData.date),
       data: dayData.cumulativeData,
-      borderColor: dayColors[dayData.dayOfWeek],
-      backgroundColor: dayColors[dayData.dayOfWeek].replace('1)', '0.1)'),
+      borderColor: dayColors[index % dayColors.length],
+      backgroundColor: dayColors[index % dayColors.length].replace('1)', '0.1)'),
       borderWidth: 2,
       fill: false,
       tension: 0.4,
       pointRadius: 4,
-      pointBackgroundColor: dayColors[dayData.dayOfWeek],
+      pointBackgroundColor: dayColors[index % dayColors.length],
       pointBorderColor: '#fff',
       pointBorderWidth: 2,
       pointHoverRadius: 6,
@@ -159,7 +170,7 @@
           },
           title: {
             display: true,
-            text: 'Cumulative Study Time by Day of Week (Last 7 Days)',
+            text: 'Cumulative Study Time (Last 7 Days)',
             font: { size: 16, weight: 'bold' },
           },
         },
@@ -184,7 +195,7 @@
     })
   }
 
-  $: examSessionId && dateRange && fetchAndProcessData()
+  $: if (examSessionId) fetchAndProcessData()
 
   onMount(() => {
     if (examSessionId) fetchAndProcessData()
@@ -192,7 +203,7 @@
 </script>
 
 <div class="card">
-  <h3>📈 Weekly Hourly Breakdown</h3>
+  <h3>📈 Cumulative Study Time (Last 7 Days)</h3>
   {#if loading}
     <div class="loading">Loading...</div>
   {:else if error}

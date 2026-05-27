@@ -13,6 +13,11 @@
 
   const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
+  function formatDate(dateString) {
+    const [year, month, day] = dateString.split('-')
+    return `${day}/${month}/${year}`
+  }
+
   async function fetchStats() {
     if (!examSessionId) return
 
@@ -20,21 +25,28 @@
       loading = true
       error = ''
       
-      // Fetch daily stats
+      // Calculate the actual last 7 days (not week boundaries)
+      const today = new Date()
+      const sevenDaysAgo = new Date(today)
+      sevenDaysAgo.setDate(today.getDate() - 6)
+      
+      const startDate = sevenDaysAgo.toISOString().split('T')[0]
+      const endDate = today.toISOString().split('T')[0]
+      
+      // Fetch daily stats for last 7 days
       const statsResponse = await fetch(
-        `/api/stats/daily?exam_session_id=${examSessionId}&start_date=${dateRange.start}&end_date=${dateRange.end}`
+        `/api/stats/daily?exam_session_id=${examSessionId}&start_date=${startDate}&end_date=${endDate}`
       )
       if (!statsResponse.ok) throw new Error('Failed to fetch stats')
       const statsData = await statsResponse.json()
       
-      // Aggregate stats by day of week
-      const aggregated = { total: 0, days: {} }
-      statsData.forEach((d) => {
+      // Aggregate stats by date (reverse to show most recent first)
+      const aggregated = { total: 0, days: {}, datesList: [] }
+      statsData.slice().reverse().forEach((d) => {
         aggregated.total += d.total_minutes
-        if (!aggregated.days[d.day_of_week]) {
-          aggregated.days[d.day_of_week] = { total: 0 }
-        }
-        aggregated.days[d.day_of_week].total += d.total_minutes
+        const dateStr = formatDate(d.date)
+        aggregated.days[dateStr] = { total: d.total_minutes }
+        aggregated.datesList.push(dateStr)
       })
       stats = aggregated
     } catch (err) {
@@ -72,7 +84,18 @@
     return `${hours}h ${mins}m`
   }
 
-  $: examSessionId && dateRange && fetchStats()
+  function calculateDifference(actualMinutes, targetMinutes) {
+    const diff = actualMinutes - targetMinutes
+    if (diff > 0) return `+${Math.floor(diff)}m`
+    if (diff < 0) return `-${Math.floor(Math.abs(diff))}m`
+    return '✓'
+  }
+
+  function isAboveTarget(actualMinutes, targetMinutes) {
+    return actualMinutes >= targetMinutes
+  }
+
+  $: if (examSessionId) fetchStats()
 
   onMount(() => {
     if (examSessionId) fetchStats()
@@ -96,7 +119,11 @@
       <div class="stat-item">
         <div class="stat-label">Average per Day</div>
         <div class="stat-value">
-          {formatMinutes(Math.round(stats.total / 7))}
+          {#if stats.datesList && stats.datesList.length > 0}
+            {formatMinutes(Math.round(stats.total / stats.datesList.length))}
+          {:else}
+            {formatMinutes(0)}
+          {/if}
         </div>
       </div>
 
@@ -129,13 +156,13 @@
       {/if}
 
       <div class="targets-list">
-        {#each dayNames as day, index}
+        {#each stats.datesList as dateStr}
           <div class="target-item">
             <div class="target-left">
-              <span class="day-name">{day}</span>
-              {#if stats.days[index]}
+              <span class="day-name">{dateStr}</span>
+              {#if stats.days[dateStr]}
                 <span class="current-time">
-                  {formatMinutes(stats.days[index].total)} / {formatMinutes(examSession?.target_minutes || 240)}
+                  {formatMinutes(stats.days[dateStr].total)} / {formatMinutes(examSession?.target_minutes || 240)}
                 </span>
               {:else}
                 <span class="current-time">0m / {formatMinutes(examSession?.target_minutes || 240)}</span>
@@ -144,7 +171,7 @@
             <div class="progress-bar">
               <div 
                 class="progress-fill" 
-                style="width: {Math.min(100, (stats.days[index]?.total || 0) / (examSession?.target_minutes || 240) * 100)}%"
+                style="width: {Math.min(100, (stats.days[dateStr]?.total || 0) / (examSession?.target_minutes || 240) * 100)}%"
               ></div>
             </div>
           </div>
