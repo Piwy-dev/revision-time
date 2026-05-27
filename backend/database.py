@@ -19,12 +19,12 @@ class ExamSession(Base):
     description = Column(String, nullable=True)
     start_date = Column(String)  # YYYY-MM-DD format
     end_date = Column(String, nullable=True)  # YYYY-MM-DD format
+    target_minutes = Column(Integer, default=240)  # Daily goal in minutes (default 4 hours)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
     study_sessions = relationship("Session", back_populates="exam_session", cascade="all, delete-orphan")
-    daily_targets = relationship("ExamDailyTarget", back_populates="exam_session", cascade="all, delete-orphan")
 
 
 class Session(Base):
@@ -48,18 +48,6 @@ class DailyTarget(Base):
     id = Column(Integer, primary_key=True, index=True)
     day_of_week = Column(Integer)  # 0=Monday, 6=Sunday
     target_minutes = Column(Integer, default=240)  # Default 4 hours
-
-
-class ExamDailyTarget(Base):
-    __tablename__ = "exam_daily_targets"
-
-    id = Column(Integer, primary_key=True, index=True)
-    exam_session_id = Column(Integer, ForeignKey("exam_sessions.id"), index=True)
-    day_of_week = Column(Integer)  # 0=Monday, 6=Sunday
-    target_minutes = Column(Integer, default=240)  # Default 4 hours
-    
-    # Relationship
-    exam_session = relationship("ExamSession", back_populates="daily_targets")
 
 
 def init_db():

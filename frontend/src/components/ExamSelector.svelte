@@ -7,6 +7,7 @@
   let examDescription = ''
   let startDate = new Date().toISOString().split('T')[0]
   let endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  let targetMinutes = 240  // Default 4 hours
   let loading = false
   let error = ''
 
@@ -18,6 +19,11 @@
 
     if (new Date(endDate) <= new Date(startDate)) {
       error = 'End date must be after start date'
+      return
+    }
+
+    if (!targetMinutes || targetMinutes <= 0) {
+      error = 'Daily target must be greater than 0'
       return
     }
 
@@ -33,6 +39,7 @@
           description: examDescription,
           start_date: startDate,
           end_date: endDate,
+          target_minutes: targetMinutes,
         }),
       })
 
@@ -47,6 +54,7 @@
       examDescription = ''
       startDate = new Date().toISOString().split('T')[0]
       endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      targetMinutes = 240
       error = ''
 
       onExamCreated()
@@ -81,6 +89,11 @@
       <label for="end-date">End Date</label>
       <input type="date" id="end-date" bind:value={endDate} />
     </div>
+  </div>
+
+  <div class="form-group">
+    <label for="target-minutes">Daily Study Target (minutes)</label>
+    <input type="number" id="target-minutes" placeholder="240" bind:value={targetMinutes} min="1" />
   </div>
 
   {#if error}

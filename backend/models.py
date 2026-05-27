@@ -8,6 +8,7 @@ class ExamSessionCreate(BaseModel):
     description: str = ""
     start_date: str  # YYYY-MM-DD
     end_date: str = None  # YYYY-MM-DD, optional
+    target_minutes: int = 240  # Daily goal in minutes
 
 
 class ExamSessionResponse(BaseModel):
@@ -16,6 +17,7 @@ class ExamSessionResponse(BaseModel):
     description: str
     start_date: str
     end_date: str = None
+    target_minutes: int
     is_active: bool
     created_at: datetime
 
@@ -51,20 +53,6 @@ class DailyTargetUpdate(BaseModel):
 
 class DailyTargetResponse(BaseModel):
     id: int
-    day_of_week: int
-    target_minutes: int
-
-    class Config:
-        from_attributes = True
-
-
-class ExamDailyTargetUpdate(BaseModel):
-    target_minutes: int
-
-
-class ExamDailyTargetResponse(BaseModel):
-    id: int
-    exam_session_id: int
     day_of_week: int
     target_minutes: int
 

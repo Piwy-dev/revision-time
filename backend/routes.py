@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timedelta
 from backend.database import Session as DBSession
-from backend.database import DailyTarget, ExamSession, ExamDailyTarget, get_db
+from backend.database import DailyTarget, ExamSession, get_db
 import backend.models as schemas
 from datetime import datetime as dt
 
@@ -28,6 +28,7 @@ def create_exam_session(session_data: schemas.ExamSessionCreate, db: Session = D
         description=session_data.description,
         start_date=session_data.start_date,
         end_date=session_data.end_date,
+        target_minutes=session_data.target_minutes,
         is_active=True,
     )
     db.add(db_session)
@@ -67,6 +68,7 @@ def update_exam_session(
     session.description = session_data.description
     session.start_date = session_data.start_date
     session.end_date = session_data.end_date
+    session.target_minutes = session_data.target_minutes
     
     db.commit()
     db.refresh(session)
@@ -192,13 +194,8 @@ def get_daily_stats(
         DBSession.date <= end_date,
     ).all()
     
-    # Get targets for this exam session
-    targets = {
-        t.day_of_week: t.target_minutes 
-        for t in db.query(ExamDailyTarget).filter(
-            ExamDailyTarget.exam_session_id == exam_session_id
-        ).all()
-    }
+    # Get targets for this exam session (now a single daily target)
+    target = exam_session.target_minutes
     
     # Build daily stats
     daily_totals = {}
@@ -217,7 +214,6 @@ def get_daily_stats(
     while current <= end:
         date_str = current.strftime("%Y-%m-%d")
         day_of_week = current.weekday()  # 0=Monday, 6=Sunday
-        target = targets.get(day_of_week, 240)  # Default 4 hours
         
         total = daily_totals.get(date_str, {}).get("total_minutes", 0)
         stats.append(schemas.DailyStats(
@@ -275,55 +271,23 @@ def get_hourly_stats(
     return [schemas.HourlyStats(hour=h, total_minutes=m) for h, m in hourly_totals.items()]
 
 
-# ==================== DAILY TARGET ENDPOINTS ====================
+# ==================== EXAM TARGET ENDPOINT ====================
 
-@router.get("/exam-targets/{exam_session_id}", response_model=list[schemas.ExamDailyTargetResponse])
-def get_exam_targets(exam_session_id: int, db: Session = Depends(get_db)):
-    """Get all daily targets for an exam session"""
-    targets = db.query(ExamDailyTarget).filter(
-        ExamDailyTarget.exam_session_id == exam_session_id
-    ).all()
-    
-    # Ensure all days exist
-    existing_days = {t.day_of_week for t in targets}
-    for day in range(7):
-        if day not in existing_days:
-            target = ExamDailyTarget(exam_session_id=exam_session_id, day_of_week=day, target_minutes=240)
-            db.add(target)
-    db.commit()
-    
-    targets = db.query(ExamDailyTarget).filter(
-        ExamDailyTarget.exam_session_id == exam_session_id
-    ).all()
-    return targets
-
-
-@router.put("/exam-targets/{exam_session_id}/{day_of_week}", response_model=schemas.ExamDailyTargetResponse)
+@router.put("/exam-sessions/{exam_session_id}/target", response_model=schemas.ExamSessionResponse)
 def update_exam_target(
     exam_session_id: int,
-    day_of_week: int,
-    target_data: schemas.ExamDailyTargetUpdate,
+    target_data: schemas.DailyTargetUpdate,
     db: Session = Depends(get_db)
 ):
     """Update daily target for an exam session"""
-    target = db.query(ExamDailyTarget).filter(
-        ExamDailyTarget.exam_session_id == exam_session_id,
-        ExamDailyTarget.day_of_week == day_of_week
-    ).first()
+    exam_session = db.query(ExamSession).filter(ExamSession.id == exam_session_id).first()
+    if not exam_session:
+        raise HTTPException(status_code=404, detail="Exam session not found")
     
-    if not target:
-        target = ExamDailyTarget(
-            exam_session_id=exam_session_id,
-            day_of_week=day_of_week,
-            target_minutes=target_data.target_minutes
-        )
-        db.add(target)
-    else:
-        target.target_minutes = target_data.target_minutes
-    
+    exam_session.target_minutes = target_data.target_minutes
     db.commit()
-    db.refresh(target)
-    return target
+    db.refresh(exam_session)
+    return exam_session
 
 
 # ==================== LEGACY GLOBAL ENDPOINTS (Optional) ====================

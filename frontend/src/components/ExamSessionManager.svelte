@@ -17,6 +17,7 @@
       description: exam.description,
       start_date: exam.start_date,
       end_date: exam.end_date,
+      target_minutes: exam.target_minutes,
     }
   }
 
@@ -33,6 +34,11 @@
 
     if (new Date(editFormData.end_date) <= new Date(editFormData.start_date)) {
       error = 'End date must be after start date'
+      return
+    }
+
+    if (!editFormData.target_minutes || editFormData.target_minutes <= 0) {
+      error = 'Daily target must be greater than 0'
       return
     }
 
@@ -147,6 +153,17 @@
                 </div>
               </div>
 
+              <div class="form-group">
+                <label for="target-{exam.id}">Daily Target (minutes)</label>
+                <input 
+                  id="target-{exam.id}" 
+                  type="number" 
+                  bind:value={editFormData.target_minutes}
+                  placeholder="240"
+                  min="1"
+                />
+              </div>
+
               <div class="button-group">
                 <button class="btn-save" on:click={saveEdit} disabled={loading}>
                   {loading ? 'Saving...' : 'Save'}
@@ -175,6 +192,10 @@
                 <div class="date-item">
                   <span class="label">End:</span>
                   <span class="value">{formatDate(exam.end_date)}</span>
+                </div>
+                <div class="date-item">
+                  <span class="label">Daily Target:</span>
+                  <span class="value">{Math.floor(exam.target_minutes / 60)}h {exam.target_minutes % 60}m</span>
                 </div>
               </div>
 
