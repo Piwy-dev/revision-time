@@ -172,7 +172,7 @@
       <HourlyChart examSessionId={selectedExamSession.id} dateRange={getDateRange()} />
     </div>
 
-    <Stats examSessionId={selectedExamSession.id} dateRange={getDateRange()} />
+    <Stats examSessionId={selectedExamSession.id} examSession={selectedExamSession} dateRange={getDateRange()} />
   {/if}
 </div>
 
