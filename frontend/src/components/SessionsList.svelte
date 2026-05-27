@@ -9,6 +9,9 @@
   let error = ''
   let editingId = null
   let editFormData = {}
+  let currentPage = 0
+  const itemsPerPage = 20
+  let paginatedSessions = []
 
   function sortSessions(sessionsToSort) {
     return sessionsToSort.sort((a, b) => {
@@ -29,10 +32,16 @@
     if (!examSessionId) return
     loading = true
     error = ''
+    currentPage = 0
 
     try {
+      // Fetch all sessions for this exam session using a wide date range
+      const startDate = '2000-01-01' // Far in the past
+      const today = new Date()
+      const endDate = today.toISOString().split('T')[0]
+      
       const response = await fetch(
-        `/api/sessions?exam_session_id=${examSessionId}&start_date=${dateRange.start}&end_date=${dateRange.end}`
+        `/api/sessions?exam_session_id=${examSessionId}&start_date=${startDate}&end_date=${endDate}`
       )
       if (!response.ok) throw new Error('Failed to load sessions')
       sessions = sortSessions(await response.json())
@@ -118,8 +127,37 @@
     return `${hours}h ${mins}m`
   }
 
-  $: if (examSessionId && dateRange.start && dateRange.end) {
+  function getPaginatedSessions() {
+    const start = currentPage * itemsPerPage
+    const end = start + itemsPerPage
+    return sessions.slice(start, end)
+  }
+
+  function getTotalPages() {
+    return Math.max(1, Math.ceil(sessions.length / itemsPerPage))
+  }
+
+  function goToNextPage() {
+    const maxPage = getTotalPages() - 1
+    if (currentPage < maxPage) {
+      currentPage = currentPage + 1
+    }
+  }
+
+  function goToPreviousPage() {
+    if (currentPage > 0) {
+      currentPage = currentPage - 1
+    }
+  }
+
+  $: if (examSessionId) {
     loadSessions()
+  }
+
+  $: {
+    const start = currentPage * itemsPerPage
+    const end = start + itemsPerPage
+    paginatedSessions = sessions.slice(start, end)
   }
 </script>
 
@@ -149,7 +187,7 @@
           </tr>
         </thead>
         <tbody>
-          {#each sessions as session (session.id)}
+          {#each paginatedSessions as session (session.id)}
             {#if editingId === session.id}
               <tr class="editing">
                 <td>
@@ -186,17 +224,24 @@
       </table>
     </div>
 
-    <div class="sessions-stats">
-      <div class="stat">
-        <span class="label">Total Sessions:</span>
-        <span class="value">{sessions.length}</span>
-      </div>
-      <div class="stat">
-        <span class="label">Total Time:</span>
-        <span class="value">
-          {formatDuration(sessions.reduce((sum, s) => sum + s.duration_minutes, 0))}
-        </span>
-      </div>
+    <div class="pagination-controls">
+      <button 
+        class="pagination-btn" 
+        on:click={goToPreviousPage} 
+        disabled={currentPage === 0}
+      >
+        ← Previous
+      </button>
+      <span class="page-info">
+        Page {currentPage + 1} of {getTotalPages()}
+      </span>
+      <button 
+        class="pagination-btn" 
+        on:click={goToNextPage} 
+        disabled={currentPage === getTotalPages() - 1}
+      >
+        Next →
+      </button>
     </div>
   {/if}
 </div>
@@ -207,6 +252,7 @@
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
   }
 
   h2 {
@@ -357,30 +403,47 @@
     transform: translateY(-1px);
   }
 
-  .sessions-stats {
+  .pagination-controls {
     display: flex;
-    gap: 30px;
-    padding: 15px;
-    background: #f5f5f5;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 12px;
+    background: #f8f9fa;
     border-radius: 8px;
   }
 
-  .stat {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
+  .pagination-btn {
+    padding: 6px 12px;
+    border: 1px solid #667eea;
+    background: white;
+    color: #667eea;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.2s ease;
   }
 
-  .label {
-    font-size: 0.85rem;
+  .pagination-btn:hover:not(:disabled) {
+    background: #667eea;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+  }
+
+  .pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .page-info {
+    font-size: 13px;
     color: #666;
     font-weight: 500;
-  }
-
-  .value {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #667eea;
+    min-width: 100px;
+    text-align: center;
   }
 
   @media (max-width: 768px) {
@@ -403,9 +466,13 @@
       margin: 0 2px;
     }
 
-    .sessions-stats {
+    .pagination-controls {
       flex-direction: column;
-      gap: 15px;
+      gap: 10px;
+    }
+
+    .pagination-btn {
+      width: 100%;
     }
   }
 </style>
