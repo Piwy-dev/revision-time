@@ -1,6 +1,7 @@
 <script>
   import DailyChart from './components/DailyChart.svelte'
   import HourlyChart from './components/HourlyChart.svelte'
+  import WeeklyHourlyChart from './components/WeeklyHourlyChart.svelte'
   import SessionForm from './components/SessionForm.svelte'
   import Stats from './components/Stats.svelte'
   import ExamSelector from './components/ExamSelector.svelte'
@@ -198,6 +199,8 @@
       <DailyChart examSessionId={selectedExamSession.id} dateRange={getDateRange()} />
       <HourlyChart examSessionId={selectedExamSession.id} dateRange={getDateRange()} />
     </div>
+
+    <WeeklyHourlyChart examSessionId={selectedExamSession.id} dateRange={getDateRange()} />
 
     <Stats examSessionId={selectedExamSession.id} examSession={selectedExamSession} dateRange={getDateRange()} />
   {/if}
