@@ -2,7 +2,6 @@
   import { onMount } from 'svelte'
 
   export let examSessionId = null
-  export let dateRange = { start: '', end: '' }
 
   let sessions = []
   let loading = false
