@@ -1,6 +1,7 @@
 <script>
   export let onExamCreated = () => {}
   export let onSelectExam = () => {}
+  export let onClose = null
   export let examSessions = []
 
   let examName = ''
@@ -68,7 +69,12 @@
 </script>
 
 <div class="form-card">
-  <h2>Create New Exam Session</h2>
+  <div class="header-row">
+    <h2>Create New Exam Session</h2>
+    {#if onClose}
+      <button class="close-btn" on:click={onClose}>✕</button>
+    {/if}
+  </div>
   
   <div class="form-group">
     <label for="exam-name">Exam Name</label>
@@ -131,6 +137,36 @@
   h2 {
     font-size: 20px;
     margin: 0 0 20px 0;
+    color: #333;
+  }
+
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .header-row h2 {
+    margin: 0;
+  }
+
+  .close-btn {
+    padding: 4px 8px;
+    border: 1px solid #ddd;
+    background: white;
+    color: #666;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    min-width: unset;
+  }
+
+  .close-btn:hover {
+    background: #f5f5f5;
+    border-color: #bbb;
     color: #333;
   }
 

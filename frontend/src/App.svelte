@@ -137,34 +137,34 @@
         </div>
       {/if}
       <button class="btn btn-secondary" on:click={() => { showExamManager = !showExamManager; showExamCreator = false; showSessionsList = false; showForm = false }}>
-        {showExamManager ? '✕' : '⚙️ Manage'}
+        ⚙️ Manage
       </button>
       <button class="btn btn-secondary" on:click={() => showExamCreator = !showExamCreator}>
-        {showExamCreator ? '✕' : '+ New Exam'}
+        + New Exam
       </button>
       <button class="btn btn-primary" on:click={() => { showSessionsList = !showSessionsList; showForm = false }}>
-        {showSessionsList ? '✕ Close' : '📋 Sessions'}
+        📋 Sessions
       </button>
       <button class="btn btn-primary" on:click={toggleForm}>
-        {showForm ? '✕ Close' : '+ Add Session'}
+        + Add Session
       </button>
     </div>
   </header>
 
   {#if showExamCreator}
-    <ExamSelector onExamCreated={handleExamCreated} onSelectExam={(exam) => selectedExamSession = exam} bind:examSessions />
+    <ExamSelector onExamCreated={handleExamCreated} onSelectExam={(exam) => selectedExamSession = exam} bind:examSessions onClose={() => showExamCreator = false} />
   {/if}
 
   {#if showExamManager}
-    <ExamSessionManager {examSessions} onExamUpdated={handleExamUpdated} onExamDeleted={handleExamDeleted} />
+    <ExamSessionManager {examSessions} onExamUpdated={handleExamUpdated} onExamDeleted={handleExamDeleted} onClose={() => showExamManager = false} />
   {/if}
 
   {#if showSessionsList && selectedExamSession}
-    <SessionsList examSessionId={selectedExamSession.id} dateRange={getDateRange()} />
+    <SessionsList examSessionId={selectedExamSession.id} dateRange={getDateRange()} onClose={() => showSessionsList = false} />
   {/if}
 
   {#if showForm && selectedExamSession}
-    <SessionForm examSessionId={selectedExamSession.id} onSessionAdded={handleSessionAdded} />
+    <SessionForm examSessionId={selectedExamSession.id} onSessionAdded={handleSessionAdded} onClose={() => showForm = false} />
   {/if}
 
   {#if !selectedExamSession}

@@ -2,6 +2,7 @@
   import { onMount } from 'svelte'
 
   export let examSessionId = null
+  export let onClose = null
 
   let sessions = []
   let loading = false
@@ -161,7 +162,12 @@
 </script>
 
 <div class="sessions-list-container">
-  <h2>📋 All Sessions</h2>
+  <div class="header-row">
+    <h2>📋 All Sessions</h2>
+    {#if onClose}
+      <button class="close-btn" on:click={onClose}>✕</button>
+    {/if}
+  </div>
 
   {#if error}
     <div class="error-message">{error}</div>
@@ -259,6 +265,36 @@
     margin-bottom: 20px;
     color: #333;
     font-size: 1.5rem;
+  }
+
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .header-row h2 {
+    margin: 0;
+  }
+
+  .close-btn {
+    padding: 4px 8px;
+    border: 1px solid #ddd;
+    background: white;
+    color: #666;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    min-width: unset;
+  }
+
+  .close-btn:hover {
+    background: #f5f5f5;
+    border-color: #bbb;
+    color: #333;
   }
 
   .error-message {

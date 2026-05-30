@@ -4,6 +4,7 @@
   export let examSessions = []
   export let onExamUpdated = () => {}
   export let onExamDeleted = () => {}
+  export let onClose = null
 
   let loading = false
   let error = ''
@@ -106,7 +107,12 @@
 </script>
 
 <div class="exam-manager-container">
-  <h2>📚 Manage Exams</h2>
+  <div class="header-row">
+    <h2>📚 Manage Exams</h2>
+    {#if onClose}
+      <button class="close-btn" on:click={onClose}>✕</button>
+    {/if}
+  </div>
 
   {#if error}
     <div class="error-message">{error}</div>
@@ -225,6 +231,37 @@
     margin-bottom: 20px;
     color: #333;
     font-size: 1.5rem;
+  }
+
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .header-row h2 {
+    margin: 0;
+  }
+
+  .close-btn {
+    padding: 4px 8px;
+    border: 1px solid #ddd;
+    background: white;
+    color: #666;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    min-width: unset;
+    flex: none;
+  }
+
+  .close-btn:hover {
+    background: #f5f5f5;
+    border-color: #bbb;
+    color: #333;
   }
 
   .error-message {
