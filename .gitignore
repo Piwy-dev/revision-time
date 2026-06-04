@@ -16,7 +16,7 @@ pnpm-lock.yaml
 frontend/dist/
 
 # Database
-study.db
+*.db
 
 # IDE
 .vscode/

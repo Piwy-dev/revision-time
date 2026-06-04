@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timedelta
 from backend.database import Session as DBSession
-from backend.database import DailyTarget, ExamSession, get_db
+from backend.database import DailyTarget, ExamSession, ExamDay, get_db
 import backend.models as schemas
 from datetime import datetime as dt
 
@@ -85,6 +85,56 @@ def delete_exam_session(exam_session_id: int, db: Session = Depends(get_db)):
     db.delete(session)
     db.commit()
     return {"message": "Exam session deleted"}
+
+
+# ==================== EXAM DAYS ENDPOINTS ====================
+
+@router.post("/exam-days", response_model=schemas.ExamDayResponse)
+def create_exam_day(exam_day_data: schemas.ExamDayCreate, db: Session = Depends(get_db)):
+    """Mark a date as an exam day for a specific exam session"""
+    exam_session = db.query(ExamSession).filter(ExamSession.id == exam_day_data.exam_session_id).first()
+    if not exam_session:
+        raise HTTPException(status_code=404, detail="Exam session not found")
+    
+    # Check if this date is already marked as exam day
+    existing = db.query(ExamDay).filter(
+        ExamDay.exam_session_id == exam_day_data.exam_session_id,
+        ExamDay.date == exam_day_data.date
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="This date is already marked as an exam day")
+    
+    db_exam_day = ExamDay(
+        exam_session_id=exam_day_data.exam_session_id,
+        date=exam_day_data.date,
+    )
+    db.add(db_exam_day)
+    db.commit()
+    db.refresh(db_exam_day)
+    return db_exam_day
+
+
+@router.get("/exam-days", response_model=list[schemas.ExamDayResponse])
+def get_exam_days(exam_session_id: int = Query(...), db: Session = Depends(get_db)):
+    """Get all exam days for a specific exam session"""
+    exam_session = db.query(ExamSession).filter(ExamSession.id == exam_session_id).first()
+    if not exam_session:
+        raise HTTPException(status_code=404, detail="Exam session not found")
+    
+    exam_days = db.query(ExamDay).filter(ExamDay.exam_session_id == exam_session_id).order_by(ExamDay.date).all()
+    return exam_days
+
+
+@router.delete("/exam-days/{exam_day_id}")
+def delete_exam_day(exam_day_id: int, db: Session = Depends(get_db)):
+    """Remove an exam day marking"""
+    exam_day = db.query(ExamDay).filter(ExamDay.id == exam_day_id).first()
+    if not exam_day:
+        raise HTTPException(status_code=404, detail="Exam day not found")
+    
+    db.delete(exam_day)
+    db.commit()
+    return {"message": "Exam day removed"}
 
 
 # ==================== SESSION ENDPOINTS (per exam) ====================
@@ -194,6 +244,14 @@ def get_daily_stats(
         DBSession.date <= end_date,
     ).all()
     
+    # Get all exam days for this exam session
+    exam_days = db.query(ExamDay).filter(
+        ExamDay.exam_session_id == exam_session_id,
+        ExamDay.date >= start_date,
+        ExamDay.date <= end_date,
+    ).all()
+    exam_day_dates = {ed.date for ed in exam_days}
+    
     # Get targets for this exam session (now a single daily target)
     target = exam_session.target_minutes
     
@@ -216,11 +274,13 @@ def get_daily_stats(
         day_of_week = current.weekday()  # 0=Monday, 6=Sunday
         
         total = daily_totals.get(date_str, {}).get("total_minutes", 0)
+        is_exam_day = date_str in exam_day_dates
         stats.append(schemas.DailyStats(
             date=date_str,
             day_of_week=day_of_week,
             total_minutes=total,
             target_minutes=target,
+            is_exam_day=is_exam_day,
         ))
         current += timedelta(days=1)
     

@@ -13,6 +13,7 @@
   let currentPage = 0
   const daysPerPage = 7
   let paginatedDays = []
+  let examDays = new Set()
 
   const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
@@ -46,12 +47,19 @@
       if (!statsResponse.ok) throw new Error('Failed to fetch stats')
       const statsData = await statsResponse.json()
       
+      // Load exam days
+      const examDaysResponse = await fetch(`/api/exam-days?exam_session_id=${examSessionId}`)
+      if (examDaysResponse.ok) {
+        const examDaysData = await examDaysResponse.json()
+        examDays = new Set(examDaysData.map(ed => ed.date))
+      }
+      
       // Aggregate stats by date (reverse to show most recent first)
       const aggregated = { total: 0, days: {}, datesList: [] }
       statsData.slice().reverse().forEach((d) => {
         aggregated.total += d.total_minutes
         const dateStr = formatDate(d.date)
-        aggregated.days[dateStr] = { total: d.total_minutes }
+        aggregated.days[dateStr] = { total: d.total_minutes, isExamDay: examDays.has(d.date) }
         aggregated.datesList.push(dateStr)
       })
       stats = aggregated
@@ -214,7 +222,7 @@
 
       <div class="targets-list">
         {#each paginatedDays as dateStr}
-          <div class="target-item">
+          <div class="target-item" class:exam-day={stats.days[dateStr]?.isExamDay}>
             <div class="target-left">
               <span class="day-name">{dateStr}</span>
               {#if stats.days[dateStr]}
@@ -231,10 +239,11 @@
                 </span>
               {/if}
             </div>
-            <div class="progress-bar">
+            <div class="progress-bar" class:exam-day={stats.days[dateStr]?.isExamDay}>
               <div 
                 class="progress-fill"
                 class:above={stats.days[dateStr] && isAboveTarget(stats.days[dateStr].total, examSession?.target_minutes || 240)}
+                class:exam-day={stats.days[dateStr]?.isExamDay}
                 style="width: {Math.min(100, (stats.days[dateStr]?.total || 0) / (examSession?.target_minutes || 240) * 100)}%"
               ></div>
             </div>
@@ -429,10 +438,28 @@
     background: #f8f9fa;
     border-radius: 6px;
     transition: background 0.2s ease;
+    border-left: 4px solid transparent;
   }
 
   .target-item:hover {
     background: #ecf0f1;
+  }
+
+  .target-item.exam-day {
+    background: #fff3e0;
+    border-left-color: #ff9800;
+  }
+
+  .target-item.exam-day:hover {
+    background: #ffe0b2;
+  }
+
+  .target-item.exam-day .day-name {
+    color: #e65100;
+  }
+
+  .target-item.exam-day .current-time {
+    color: #d84315;
   }
 
   .target-left {
@@ -485,6 +512,18 @@
 
   .progress-fill.above {
     background: linear-gradient(90deg, #2ecc71 0%, #27ae60 100%);
+  }
+
+  .progress-bar.exam-day {
+    background: #ffe6b3;
+  }
+
+  .progress-fill.exam-day {
+    background: linear-gradient(90deg, #ffc107 0%, #ff9800 100%);
+  }
+
+  .progress-fill.exam-day.above {
+    background: linear-gradient(90deg, #ffc107 0%, #ff9800 100%);
   }
 
   .loading,

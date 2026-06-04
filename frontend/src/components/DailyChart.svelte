@@ -41,6 +41,14 @@
 
     const totalMinutes = data.map((d) => d.total_minutes)
     const targetMinutes = data.map((d) => d.target_minutes)
+    
+    // Create array of background colors - highlight exam days
+    const backgroundColor = data.map((d) => 
+      d.is_exam_day ? 'rgba(255, 193, 7, 0.8)' : 'rgba(102, 126, 234, 0.8)'
+    )
+    const borderColor = data.map((d) =>
+      d.is_exam_day ? 'rgba(255, 193, 7, 1)' : 'rgba(102, 126, 234, 1)'
+    )
 
     if (chart) chart.destroy()
 
@@ -52,8 +60,8 @@
           {
             label: 'Study Time (minutes)',
             data: totalMinutes,
-            backgroundColor: 'rgba(102, 126, 234, 0.8)',
-            borderColor: 'rgba(102, 126, 234, 1)',
+            backgroundColor,
+            borderColor,
             borderWidth: 1,
             borderRadius: 6,
           },
@@ -81,6 +89,16 @@
             text: 'Daily Study Time',
             font: { size: 16, weight: 'bold' },
           },
+          tooltip: {
+            callbacks: {
+              afterLabel: function(context) {
+                if (data[context.dataIndex].is_exam_day) {
+                  return '🎓 Exam Day'
+                }
+                return ''
+              }
+            }
+          }
         },
         scales: {
           y: {

@@ -66,8 +66,25 @@ class DailyStats(BaseModel):
     day_of_week: int
     total_minutes: int
     target_minutes: int
+    is_exam_day: bool = False
 
 
 class HourlyStats(BaseModel):
     hour: int
     total_minutes: int
+
+
+# Exam Days Schemas
+class ExamDayCreate(BaseModel):
+    exam_session_id: int
+    date: str  # YYYY-MM-DD
+
+
+class ExamDayResponse(BaseModel):
+    id: int
+    exam_session_id: int
+    date: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

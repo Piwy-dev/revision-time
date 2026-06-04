@@ -50,6 +50,15 @@ class DailyTarget(Base):
     target_minutes = Column(Integer, default=240)  # Default 4 hours
 
 
+class ExamDay(Base):
+    __tablename__ = "exam_days"
+
+    id = Column(Integer, primary_key=True, index=True)
+    exam_session_id = Column(Integer, ForeignKey("exam_sessions.id"), index=True)
+    date = Column(String, index=True)  # YYYY-MM-DD format
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
 

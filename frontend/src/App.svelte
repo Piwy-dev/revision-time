@@ -7,6 +7,7 @@
   import ExamSelector from './components/ExamSelector.svelte'
   import SessionsList from './components/SessionsList.svelte'
   import ExamSessionManager from './components/ExamSessionManager.svelte'
+  import ExamDaysManager from './components/ExamDaysManager.svelte'
   import { onMount } from 'svelte'
 
   let showForm = false
@@ -196,6 +197,8 @@
     </div>
 
     <WeeklyHourlyChart examSessionId={selectedExamSession.id} dateRange={getDateRange()} />
+
+    <ExamDaysManager examSessionId={selectedExamSession.id} />
 
     <!-- Hidden for now
     <div key={refreshKey} class="charts-grid">
